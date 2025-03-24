@@ -4,13 +4,18 @@ const dbClient = require('../utils/db');
 const redisClient = require('../utils/redis');
 const path = require('path');
 const mime = require('mime-types');
+const { ObjectId } = require('mongodb');
 
 class FilesController {
   static async postUpload(req, res) {
     // auth
-    const token = req.headers['X-Token'];
+    const token = req.headers['x-token'];
     const key = `auth_${token}`;
+
+    console.log(`Looking for token: ${key}`);
     const userId = await redisClient.get(key);
+    console.log(`Found userId: ${userId}`);
+
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -22,24 +27,27 @@ class FilesController {
     }
 
     // parent validate
+    let parentFile = null;
     if (parentId !== 0) {
-      const parentFile = await dbClient.getFile(parentId);
+      parentFile = await dbClient.db
+        .collection('files')
+        .findOne({ _id: dbClient.getObjectId(parentId) });
       if (!parentFile) {
         return res.status(400).json({ error: 'Parent not found' });
       }
-    }
-    if (parentFile.type !== 'folder') {
-      return res.status(400).json({ error: 'Parent is not a folder' });
+      if (parentFile.type !== 'folder') {
+        return res.status(400).json({ error: 'Parent is not a folder' });
+      }
     }
 
     // file structure
     const file = {
-      userId: dbClient.getObjectId(userId),
+      userId: ObjectId(userId),
       name,
       type,
       isPublic,
       data,
-      parentId: parentId === 0 ? 0 : dbClient.getObjectId(parentId),
+      parentId: parentId === 0 ? 0 : ObjectId(parentId),
     };
 
     // handle the folder
