@@ -22,7 +22,19 @@ class FilesController {
 
     // validate params
     const { name, type, parentId = 0, isPublic = false, data } = req.body;
-    if (!name || !type || !data) {
+
+    if (!name) {
+      return res.status(400).json({ error: 'Missing name' });
+    }
+
+    const validTypes = ['folder', 'file', 'image'];
+    if (!type) {
+      return res.status(400).json({ error: 'Missing type' });
+    }
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({ error: 'Invalid type' });
+    }
+    if (type !== 'folder' && !data) {
       return res.status(400).json({ error: 'Missing data' });
     }
 
@@ -31,7 +43,7 @@ class FilesController {
     if (parentId !== 0) {
       parentFile = await dbClient.db
         .collection('files')
-        .findOne({ _id: dbClient.getObjectId(parentId) });
+        .findOne({ _id: ObjectId(parentId) });
       if (!parentFile) {
         return res.status(400).json({ error: 'Parent not found' });
       }
