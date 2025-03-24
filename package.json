@@ -21,11 +21,12 @@
     "dotenv": "^16.4.7",
     "express": "^4.17.1",
     "image-thumbnail": "^1.0.10",
-    "mime-types": "^2.1.27",
+    "mime-types": "^2.1.35",
     "mongodb": "^3.5.9",
     "redis": "^2.8.0",
+    "requests": "^0.3.0",
     "sha1": "^1.1.1",
-    "uuid": "^8.2.0"
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
     "@babel/cli": "^7.8.0",
