@@ -8,7 +8,7 @@ const mime = require('mime-types');
 class FilesController {
   static async postUpload(req, res) {
     // auth
-    const token = req.header['X-Token'];
+    const token = req.headers['X-Token'];
     const key = `auth_${token}`;
     const userId = await redisClient.get(key);
     if (!userId) {
@@ -22,8 +22,8 @@ class FilesController {
     }
 
     // parent validate
-    if (parentID !== 0) {
-      const parentFile = await dbClient.getFile(parentID);
+    if (parentId !== 0) {
+      const parentFile = await dbClient.getFile(parentId);
       if (!parentFile) {
         return res.status(400).json({ error: 'Parent not found' });
       }
