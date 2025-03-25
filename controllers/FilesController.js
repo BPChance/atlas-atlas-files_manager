@@ -5,6 +5,8 @@ const redisClient = require('../utils/redis');
 const path = require('path');
 const mime = require('mime-types');
 const { ObjectId } = require('mongodb');
+const { error } = require('console');
+const { type } = require('os');
 
 class FilesController {
   static async postUpload(req, res) {
@@ -94,6 +96,76 @@ class FilesController {
       file,
       parentId: parentId === 0 ? 0 : parentId.toString(),
     });
+  }
+
+  static async getShow(req, res) {
+    // Retrieve user based on token
+    const token = req.headers['x-token'];
+    const key = `auth_${token}`;
+    const userId = await redisClient.get(key);
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+
+    // Get file ID from route parameters
+    const fileId = req.params.id;
+
+    //Fetch file document from the DB
+    const file = await dbClient.db.collection('files').findOne({ _id: ObjectId(fileId), userId: ObjectId(userId) });
+
+    if (!file) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    return res.status(200).json({
+      id: file._id.toString(),
+      userId: file.userId.toString(),
+      name: file.name,
+      type: file.type,
+      isPublic: file.isPublic,
+      parentId: file.parentId === 0 ? 0 : file.parentId.toString()
+    });
+  }
+
+  static async getIndex(req, res) {
+    // Retrieve user based on token
+    const token = req.headers['x-token'];
+    const key = `auth_${token}`;
+    const userId = await redisClient.get(key);
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+
+    // Get parameters from the rerquest
+    const parentId = req.query.parentId || '0' // Default to 0 ;
+    const page = parseInt(req.query.page, 10) || 0; // Default to 0
+
+    const query = {
+      userId: ObjectId(userId),
+      parentId: parentId === '0' ? 0 : ObjectId(parentId),
+    };
+
+    // Fetch files from MongoDB with pagination
+    const files = await dbClient.db.collection('files')
+      .aggregate([
+        { $match: query },
+        { $skip: page * 20},
+        { $limit: 20 }
+      ])
+      .toArray();
+
+    const formattedFiles = files.map(file => ({
+      id: file._id.toString(),
+      userId: file.userId.toString(),
+      name: file.name,
+      type: file.type,
+      isPublic: file.isPublic,
+      parentId: file.parentId === 0 ? 0 : file.parentId.toString()
+    }));
+
+    return res.status(200).json(formattedFiles);
   }
 }
 
