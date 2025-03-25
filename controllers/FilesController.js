@@ -130,12 +130,25 @@ class FilesController {
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
-    // Get parent ID
-    const parentId = req.params.id;
-    // Get page ID
-    const pageId = req.params.id;
+    // Get parameters from the rerquest
+    const parentId = req.query.parentId  ;
+    const page = parseInt(req.query.page, 10) || 0; //default to 0
 
+    const query = {
+      userId: ObjectId(userId),
+      parentId: parentId === '0' ? '0' : ObjectId(parentId),
+    };
 
+    // Fetch files from MongoDB with pagination
+    const files = await dbClient.db.collection('files')
+      .aggregate([
+        { $match: query },
+        { $skip: page * 20},
+        { $limit: 20 }
+      ])
+      .toArray();
+
+    return res.status(200).json(files);
   }
 }
 
