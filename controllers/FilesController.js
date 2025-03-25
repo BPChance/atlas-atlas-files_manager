@@ -5,6 +5,7 @@ const redisClient = require('../utils/redis');
 const path = require('path');
 const mime = require('mime-types');
 const { ObjectId } = require('mongodb');
+const { error } = require('console');
 
 class FilesController {
   static async postUpload(req, res) {
@@ -94,6 +95,47 @@ class FilesController {
       file,
       parentId: parentId === 0 ? 0 : parentId.toString(),
     });
+  }
+
+  static async getShow(req, res) {
+    // Retrieve user based on token
+    const token = req.headers['x-token'];
+    const key = `auth_${token}`;
+    const userId = await redisClient.get(key);
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+
+    // Get file ID from route parameters
+    const fileId = req.params.id;
+
+    //Fetch file document from the DB
+    const file = await dbClient.db.collection('files').findOne({ _id: ObjectId(fileId), userId: ObjectId(userId) });
+
+    if (!file) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    return res.status(200).json(file)
+  }
+
+  static async getIndex(req, res) {
+    // Retrieve user based on token
+    const token = req.headers['x-token'];
+    const key = `auth_${token}`;
+    const userId = await redisClient.get(key);
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+
+    // Get parent ID
+    const parentId = req.params.id;
+    // Get page ID
+    const pageId = req.params.id;
+
+
   }
 }
 
