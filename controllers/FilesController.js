@@ -6,6 +6,7 @@ const path = require('path');
 const mime = require('mime-types');
 const { ObjectId } = require('mongodb');
 const { error } = require('console');
+const { type } = require('os');
 
 class FilesController {
   static async postUpload(req, res) {
@@ -117,7 +118,14 @@ class FilesController {
       return res.status(404).json({ error: 'Not found' });
     }
 
-    return res.status(200).json(file)
+    return res.status(200).json({
+      id: file._id.toString(),
+      userId: file.userId.toString(),
+      name: file.name,
+      type: file.type,
+      isPublic: file.isPublic,
+      parentId: file.parentId === 0 ? 0 : file.parentId.toString()
+    });
   }
 
   static async getIndex(req, res) {
@@ -131,12 +139,12 @@ class FilesController {
     }
 
     // Get parameters from the rerquest
-    const parentId = req.query.parentId  ;
-    const page = parseInt(req.query.page, 10) || 0; //default to 0
+    const parentId = req.query.parentId || '0' // Default to 0 ;
+    const page = parseInt(req.query.page, 10) || 0; // Default to 0
 
     const query = {
       userId: ObjectId(userId),
-      parentId: parentId === '0' ? '0' : ObjectId(parentId),
+      parentId: parentId === '0' ? 0 : ObjectId(parentId),
     };
 
     // Fetch files from MongoDB with pagination
@@ -148,7 +156,16 @@ class FilesController {
       ])
       .toArray();
 
-    return res.status(200).json(files);
+    const formattedFiles = files.map(file => ({
+      id: file._id.toString(),
+      userId: file.userId.toString(),
+      name: file.name,
+      type: file.type,
+      isPublic: file.isPublic,
+      parentId: file.parentId === 0 ? 0 : file.parentId.toString()
+    }));
+
+    return res.status(200).json(formattedFiles);
   }
 }
 
