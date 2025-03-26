@@ -95,16 +95,19 @@ class FilesController {
 
     file.localPath = localPath;
 
-    if (!file) {
-        return res.status(404).json({ error: 'File not found' });
+    const result = await dbClient.db.collection('files').insertOne(file);
+
+    if (type === 'image') {
+      fileQueue.add({
+        userId: userId,
+        fileId: file._id.toString(),
+      });
     }
 
     fileQueue.add({
       userId: userId,
       fileId: file._id.toString(),
     });
-
-    const result = await dbClient.db.collection('files').insertOne(file);
 
     return res.status(201).json({
       id: result.insertedId,
@@ -304,6 +307,7 @@ class FilesController {
       // set headers and send file
       const mimeType = mime.lookup(file.name) || 'application/octet-stream';
       res.setHeader('Content-Type', mimeType);
+
       return res.sendFile(filePath);
     } catch (error) {
       console.error(error);
