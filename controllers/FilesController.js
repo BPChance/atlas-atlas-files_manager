@@ -105,14 +105,16 @@ class FilesController {
     const userId = await redisClient.get(key);
 
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' })
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     // Get file ID from route parameters
     const fileId = req.params.id;
 
     //Fetch file document from the DB
-    const file = await dbClient.db.collection('files').findOne({ _id: ObjectId(fileId), userId: ObjectId(userId) });
+    const file = await dbClient.db
+      .collection('files')
+      .findOne({ _id: ObjectId(fileId), userId: ObjectId(userId) });
 
     if (!file) {
       return res.status(404).json({ error: 'Not found' });
@@ -124,7 +126,7 @@ class FilesController {
       name: file.name,
       type: file.type,
       isPublic: file.isPublic,
-      parentId: file.parentId === 0 ? 0 : file.parentId.toString()
+      parentId: file.parentId === 0 ? 0 : file.parentId.toString(),
     });
   }
 
@@ -135,11 +137,11 @@ class FilesController {
     const userId = await redisClient.get(key);
 
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' })
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     // Get parameters from the rerquest
-    const parentId = req.query.parentId || '0' // Default to 0 ;
+    const parentId = req.query.parentId || '0'; // Default to 0 ;
     const page = parseInt(req.query.page, 10) || 0; // Default to 0
 
     const query = {
@@ -148,24 +150,95 @@ class FilesController {
     };
 
     // Fetch files from MongoDB with pagination
-    const files = await dbClient.db.collection('files')
-      .aggregate([
-        { $match: query },
-        { $skip: page * 20},
-        { $limit: 20 }
-      ])
+    const files = await dbClient.db
+      .collection('files')
+      .aggregate([{ $match: query }, { $skip: page * 20 }, { $limit: 20 }])
       .toArray();
 
-    const formattedFiles = files.map(file => ({
+    const formattedFiles = files.map((file) => ({
       id: file._id.toString(),
       userId: file.userId.toString(),
       name: file.name,
       type: file.type,
       isPublic: file.isPublic,
-      parentId: file.parentId === 0 ? 0 : file.parentId.toString()
+      parentId: file.parentId === 0 ? 0 : file.parentId.toString(),
     }));
 
     return res.status(200).json(formattedFiles);
+  }
+
+  static async putPublish(req, res) {
+    // get user based on token
+    const token = req.headers['x-token'];
+    const key = `auth_${token}`;
+    const userId = await redisClient.get(key);
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // get file ID from route params
+    const fileId = req.params.id;
+
+    const file = await dbClient.db
+      .collection('files')
+      .findOne({ _id: ObjectId(fileId), userId: ObjectId(userId) });
+
+    if (!file) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    // update isPubic to true
+    file.isPublic = true;
+    await dbClient.db
+      .collection('files')
+      .updateOne({ _id: ObjectId(fileId) }, { $set: { isPublic: true } });
+
+    return res.status(200).json({
+      id: file._id.toString(),
+      userId: file.userId.toString(),
+      name: file.name,
+      type: file.type,
+      isPublic: file.isPublic,
+      parentId: file.parentId === 0 ? 0 : file.parentId.toString(),
+    });
+  }
+
+  static async putUnpublish(req, res) {
+    // get user based on token
+    const token = req.headers['x-token'];
+    const key = `auth_${token}`;
+    const userId = await redisClient.get(key);
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // get file ID from route params
+    const fileId = req.params.id;
+
+    const file = await dbClient.db
+      .collection('files')
+      .findOne({ _id: ObjectId(fileId), userId: ObjectId(userId) });
+
+    if (!file) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    // update isPublic to false
+    file.isPublic = false;
+    await dbClient.db
+      .collection('files')
+      .updateOne({ _id: ObjectId(fileId) }, { $set: { isPublic: false } });
+
+    return res.status(200).json({
+      id: file._id.toString(),
+      userId: file.userId.toString(),
+      name: file.name,
+      type: file.type,
+      isPublic: file.isPublic,
+      parentId: file.parentId === 0 ? 0 : file.parentId.toString(),
+    });
   }
 }
 
