@@ -104,11 +104,6 @@ class FilesController {
       });
     }
 
-    fileQueue.add({
-      userId: userId,
-      fileId: file._id.toString(),
-    });
-
     return res.status(201).json({
       id: result.insertedId,
       file,
