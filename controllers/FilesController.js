@@ -308,7 +308,8 @@ class FilesController {
       const mimeType = mime.lookup(file.name) || 'application/octet-stream';
       res.setHeader('Content-Type', mimeType);
 
-      return res.sendFile(filePath);
+      const fileStream = fs.createReadStream(filePath);
+      fileStream.pipe(res);
     } catch (error) {
       console.error(error);
       return res.status(404).json({ error: 'Not found' });
