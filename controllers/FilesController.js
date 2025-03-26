@@ -240,6 +240,46 @@ class FilesController {
       parentId: file.parentId === 0 ? 0 : file.parentId.toString(),
     });
   }
+
+  static async getFile(req, res) {
+    const fileId = req.params.id;
+
+    if (!ObjectId.isValid(fileId)) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    const file = await dbClient.db
+      .collection('files')
+      .findOne({ _id: ObjectId(fileId) });
+    
+    if (!file) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    const token = req.headers['x-token'];
+    const key = `auth_${token}`;
+    const userId = await redisClient.get(key);
+
+    const isOwner = userId && file.userId.toString() === userId;
+
+    if (!file.isPublic && !isOwner) {
+      return res.status(404).json({ error: 'Not found' })
+    }
+
+    if (file.type === 'folder') {
+      return res.status(400).json({ error: "A folder doesn't have content" });
+    }
+
+    if (!file.localPath || !fs.existsSync(file.localPath)) {
+      return res.status(404).json({ error: 'Not found' })
+    }
+
+    const mimeType = mime.lookup(file.name) || 'application/octet-stream';
+    res.setHeader('Content-Type', mimeType);
+
+    const readStream = fs.createReadStream(file.localPath);
+    readStream.pipe(res);
+  }
 }
 
 module.exports = FilesController;
