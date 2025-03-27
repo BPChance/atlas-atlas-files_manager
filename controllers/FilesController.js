@@ -66,18 +66,14 @@ class FilesController {
       name,
       type,
       isPublic,
-      data,
       parentId: parentId === 0 ? 0 : ObjectId(parentId),
     };
 
     // handle the folder
     if (type === 'folder') {
       const result = await dbClient.db.collection('files').insertOne(file);
-      return res.status(201).json({
-        id: result.insertedId,
-        file,
-        parentId: parentId === 0 ? 0 : parentId.toString(),
-      });
+      file.id = result.insertedId.toString();
+      return res.status(201).json(file);
     }
 
     const folderPath = process.env.FOLDER_PATH || '/tmp/files_manager';
@@ -104,10 +100,16 @@ class FilesController {
       });
     }
 
+    file.id = result.insertedId.toString();
+
     return res.status(201).json({
-      id: result.insertedId,
-      file,
-      parentId: parentId === 0 ? 0 : parentId.toString(),
+        id: file.id,
+        userId: file.userId.toString(),
+        name: file.name,
+        type: file.type,
+        isPublic: file.isPublic,
+        parentId: file.parentId === 0 ? 0 : file.parentId.toString(),
+        localPath: file.localPath,
     });
   }
 
@@ -304,6 +306,10 @@ class FilesController {
       res.setHeader('Content-Type', mimeType);
 
       const fileStream = fs.createReadStream(filePath);
+      fileStream.on('error', (err) => {
+        console.error(err);
+        return res.status(404).json({ error: 'Not found' });
+      });
       fileStream.pipe(res);
     } catch (error) {
       console.error(error);
