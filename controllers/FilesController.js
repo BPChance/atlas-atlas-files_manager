@@ -100,7 +100,7 @@ class FilesController {
     if (type === 'image') {
       fileQueue.add({
         userId: userId,
-        fileId: file._id.toString(),
+        fileId: result.insertedId.toString(),
       });
     }
 
